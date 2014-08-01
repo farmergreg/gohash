@@ -16,7 +16,7 @@ import (
 	"sync"
 )
 
-var fHash = flag.String("h", "sha256", "md5 sha1 sha224 sha256 sha384 sha512")
+var fHash = flag.String("h", "sha256", "valid hashes: md5, sha1, sha224, sha256, sha384, sha512")
 var fConcurrent = flag.Int("j", runtime.NumCPU(), "Maximum number of files processed concurrently.")
 var fVersion = flag.Bool("version", false, "Print the version number and exit.")
 
