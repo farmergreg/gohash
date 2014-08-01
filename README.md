@@ -9,7 +9,6 @@ Supports the following hashes: md5 sha1 sha224 sha256 sha384 sha512.
 
 Help
 -----
-Run the following command for help using this program.:
-'''
-gohash -h
-'''
+Run the following to get help using this program.:
+
+    gohash -h
