@@ -28,7 +28,6 @@ type fileInput struct {
 
 func main() {
 	flag.Parse()
-	*fHash = strings.ToLower(*fHash)
 
 	if *fVersion {
 		fmt.Println("gosum v1.0")
@@ -51,8 +50,8 @@ func main() {
 
 	go func() {
 		var wg sync.WaitGroup
+		*fHash = strings.ToLower(*fHash)
 		for i := 0; i < *fConcurrent; i++ {
-			wg.Add(1)
 			var hash hash.Hash
 			switch *fHash {
 			case "md5":
@@ -70,6 +69,7 @@ func main() {
 			default:
 				panic("Unknown / unspported hash: " + *fHash)
 			}
+			wg.Add(1)
 			go digester(&wg, &hash, out, in)
 		}
 		wg.Wait()
@@ -83,7 +83,7 @@ func main() {
 
 func digester(wg *sync.WaitGroup, h *hash.Hash, out chan *string, files chan fileInput) {
 	for file := range files {
-		//*fBlockSize = (*h).BlockSize()
+		(*h).Reset()
 		processFile(&file.fileName, *h)
 		message := fmt.Sprintf("%d %08x\t%s", file.index, (*h).Sum(nil), file.fileName)
 		out <- &message
