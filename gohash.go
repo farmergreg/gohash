@@ -16,7 +16,6 @@ import (
 	"sync"
 )
 
-var fBlockSize = flag.Int("blockSize", 128*1024, "The block size used when reading files.")
 var fHash = flag.String("h", "sha256", "md5 sha1 sha224 sha256 sha384 sha512")
 var fConcurrent = flag.Int("j", runtime.NumCPU(), "Maximum number of files processed concurrently.")
 var fVersion = flag.Bool("version", false, "Print the version number and exit.")
@@ -92,25 +91,12 @@ func digester(wg *sync.WaitGroup, h *hash.Hash, out chan *string, files chan fil
 }
 
 func processFile(filename *string, w io.Writer) (err error) {
-	file, err := os.Open(*filename)
-	if err != nil {
+	if file, err := os.Open(*filename); err != nil {
 		return err
-	}
-	defer file.Close()
-
-	r := bufio.NewReader(file)
-	buffer := make([]byte, *fBlockSize)
-
-	for {
-		n, err := r.Read(buffer)
-		if err != nil && err != io.EOF {
-			return err
-		}
-		if n == 0 {
-			break
-		}
-
-		if _, err := (w).Write(buffer[:n]); err != nil {
+	} else {
+		defer file.Close()
+		r := bufio.NewReader(file)
+		if _, err = io.Copy(w, r); err != nil {
 			return err
 		}
 	}
