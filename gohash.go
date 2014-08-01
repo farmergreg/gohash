@@ -83,7 +83,7 @@ func main() {
 
 func digester(wg *sync.WaitGroup, h *hash.Hash, out chan *string, files chan fileInput) {
 	for file := range files {
-		*fBlockSize = (*h).BlockSize()
+		//*fBlockSize = (*h).BlockSize()
 		processFile(&file.fileName, *h)
 		message := fmt.Sprintf("%d %08x\t%s", file.index, (*h).Sum(nil), file.fileName)
 		out <- &message
@@ -111,7 +111,7 @@ func processFile(filename *string, w io.Writer) (err error) {
 		}
 
 		if _, err := (w).Write(buffer[:n]); err != nil {
-			panic(err.Error())
+			return err
 		}
 	}
 	return nil
