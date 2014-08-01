@@ -2,8 +2,8 @@ gohash
 ======
 Copyright (c) 2014, Gregory L. Dietsche.
 
-gohash is a simple concurrent file hashing program. You probably want to use it.
-I wrote it to learn about golang. So far, lovin' it!
+gohash is a simple concurrent file hashing program.
+I wrote it to learn about golang. Thus far, lovin' everything about golang - these guys think the way I do, and take a look at the code; simple, elegant and reusable. Nice!
 
 Supports the following hashes: md5, sha1, sha224, sha256, sha384, sha512.
 
