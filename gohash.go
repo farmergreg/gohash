@@ -41,12 +41,16 @@ func main() {
 	out := make(chan *string, *fConcurrent*10)
 
 	go func() {
-		for i, file := range flag.Args() {
-			stream, err := os.Open(file)
-			if err == nil {
-				in <- fileInput{i, file, stream}
-			} else {
-				fmt.Println(err.Error())
+		if len(flag.Args()) == 0 {
+			in <- fileInput{0, "", os.Stdin}
+		} else {
+			for i, file := range flag.Args() {
+				stream, err := os.Open(file)
+				if err == nil {
+					in <- fileInput{i, file, stream}
+				} else {
+					fmt.Println(err.Error())
+				}
 			}
 		}
 		close(in)
