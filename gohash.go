@@ -17,7 +17,6 @@ import (
 
 var fHash = flag.String("h", "sha256", "valid hashes: md5, sha1, sha224, sha256, sha384, sha512")
 var fConcurrent = flag.Int("j", runtime.NumCPU()*2, "Maximum number of files processed concurrently.")
-var fVersion = flag.Bool("version", false, "Print the version number and exit.")
 
 type fileInput struct {
 	index    int
@@ -26,13 +25,13 @@ type fileInput struct {
 }
 
 func main() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "%s v1.0 Copyright (c) 2014, Gregory L. Dietsche.\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage of %s: [OPTION]... [FILE]...\n", os.Args[0])
+		flag.PrintDefaults()
+	}
 	flag.Parse()
 
-	if *fVersion {
-		fmt.Println("gosum v1.0")
-		fmt.Println("Copyright (c) 2014, Gregory L. Dietsche.")
-		return
-	}
 	if *fConcurrent <= 0 {
 		*fConcurrent = 1
 	}
@@ -41,7 +40,7 @@ func main() {
 	out := make(chan *string, *fConcurrent*10)
 
 	go func() {
-		if len(flag.Args()) == 0 {
+		if flag.NFlag() == 0 {
 			in <- fileInput{0, "", os.Stdin}
 		} else {
 			for i, file := range flag.Args() {
