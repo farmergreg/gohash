@@ -56,6 +56,7 @@ func main() {
 	}()
 
 	go func() {
+		defer close(out)
 		var wg sync.WaitGroup
 		*fHash = strings.ToLower(*fHash)
 		for i := 0; i < *fConcurrent; i++ {
@@ -74,13 +75,13 @@ func main() {
 			case "sha512":
 				hash = sha512.New()
 			default:
-				panic("Unknown / unspported hash: " + *fHash)
+				fmt.Fprintf(os.Stderr, "I don't know how to compute a %s hash!", *fHash)
+				return
 			}
 			wg.Add(1)
 			go digester(&wg, &hash, out, in)
 		}
 		wg.Wait()
-		close(out)
 	}()
 
 	for curResult := range out {
