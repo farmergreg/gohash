@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -23,6 +22,7 @@ var fVersion = flag.Bool("version", false, "Print the version number and exit.")
 type fileInput struct {
 	index    int
 	fileName string
+	data     io.ReadCloser
 }
 
 func main() {
@@ -42,7 +42,12 @@ func main() {
 
 	go func() {
 		for i, file := range flag.Args() {
-			in <- fileInput{i, file}
+			stream, err := os.Open(file)
+			if err == nil {
+				in <- fileInput{i, file, stream}
+			} else {
+				fmt.Println(err.Error())
+			}
 		}
 		close(in)
 	}()
@@ -80,25 +85,15 @@ func main() {
 	}
 }
 
-func digester(wg *sync.WaitGroup, h *hash.Hash, out chan *string, files chan fileInput) {
-	for file := range files {
+func digester(wg *sync.WaitGroup, h *hash.Hash, out chan *string, streams chan fileInput) {
+	for stream := range streams {
 		(*h).Reset()
-		processFile(&file.fileName, *h)
-		message := fmt.Sprintf("%d %08x\t%s", file.index, (*h).Sum(nil), file.fileName)
+
+		io.Copy(*h, stream.data)
+		stream.data.Close()
+
+		message := fmt.Sprintf("%d %08x\t%s", stream.index, (*h).Sum(nil), stream.fileName)
 		out <- &message
 	}
 	wg.Done()
-}
-
-func processFile(filename *string, w io.Writer) (err error) {
-	if file, err := os.Open(*filename); err != nil {
-		return err
-	} else {
-		defer file.Close()
-		r := bufio.NewReader(file)
-		if _, err = io.Copy(w, r); err != nil {
-			return err
-		}
-	}
-	return nil
 }
