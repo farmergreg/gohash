@@ -42,7 +42,7 @@ func main() {
 				if stream, err := os.Open(file); err == nil {
 					in <- fileInput{&file, stream}
 				} else {
-					fmt.Println(err.Error())
+					fmt.Fprintln(os.Stderr, err.Error())
 				}
 			}
 		}
