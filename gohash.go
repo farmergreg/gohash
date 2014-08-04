@@ -22,23 +22,17 @@ type fileInput struct {
 	fileName *string
 	data     io.ReadCloser
 }
+type hashResult struct {
+	fileName *string
+	result   []byte
+}
 
 func main() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s v1.0 Copyright (c) 2014, Gregory L. Dietsche.\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "Usage of %s: [OPTION]... [FILE]...\n", os.Args[0])
-		flag.PrintDefaults()
-	}
-	flag.Parse()
+	handleFlags()
+	in := make(chan fileInput, *fConcurrent*2)
+	out := make(chan hashResult, *fConcurrent*2)
 
-	if *fConcurrent <= 0 {
-		*fConcurrent = 1
-	}
-
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	in := make(chan fileInput, *fConcurrent*10)
-	out := make(chan *string, *fConcurrent*10)
-
+	//Start opening files for processing
 	go func() {
 		if flag.NArg() == 0 {
 			in <- fileInput{nil, os.Stdin}
@@ -55,6 +49,7 @@ func main() {
 		close(in)
 	}()
 
+	//Hash the files that have been opened for processing
 	go func() {
 		defer close(out)
 		var wg sync.WaitGroup
@@ -84,27 +79,39 @@ func main() {
 		wg.Wait()
 	}()
 
+	//Display the hashing results
 	for curResult := range out {
-		fmt.Println(*curResult)
+		if curResult.fileName == nil {
+			fmt.Printf("%0x\n", curResult.result)
+		} else {
+			fmt.Printf("%0x  %s\n", curResult.result, *curResult.fileName)
+		}
 	}
 }
 
-func digester(wg *sync.WaitGroup, h *hash.Hash, out chan *string, streams chan fileInput) {
+func handleFlags() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "%s v1.0 Copyright (c) 2014, Gregory L. Dietsche.\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage of %s: [OPTION]... [FILE]...\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	if *fConcurrent <= 0 {
+		*fConcurrent = 1
+	}
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
+}
+
+func digester(wg *sync.WaitGroup, h *hash.Hash, out chan hashResult, streams chan fileInput) {
 	for stream := range streams {
 		(*h).Reset()
 
 		io.Copy(*h, stream.data)
 		stream.data.Close()
 
-		var message string
-
-		if stream.fileName != nil {
-			message = fmt.Sprintf("%0x  %s", (*h).Sum(nil), *stream.fileName)
-		} else {
-			message = fmt.Sprintf("%0x", (*h).Sum(nil))
-		}
-
-		out <- &message
+		out <- hashResult{stream.fileName, (*h).Sum(nil)}
 	}
 	wg.Done()
 }
