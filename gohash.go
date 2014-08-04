@@ -99,9 +99,9 @@ func digester(wg *sync.WaitGroup, h *hash.Hash, out chan *string, streams chan f
 		var message string
 
 		if len(stream.fileName) > 0 {
-			message = fmt.Sprintf("%08x\t%s", (*h).Sum(nil), stream.fileName)
+			message = fmt.Sprintf("%0x  %s", (*h).Sum(nil), stream.fileName)
 		} else {
-			message = fmt.Sprintf("%08x", (*h).Sum(nil))
+			message = fmt.Sprintf("%0x", (*h).Sum(nil))
 		}
 
 		out <- &message
