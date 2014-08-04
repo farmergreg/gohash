@@ -19,7 +19,7 @@ var fHash = flag.String("h", "sha256", "valid hashes: md5, sha1, sha224, sha256,
 var fConcurrent = flag.Int("j", runtime.NumCPU()*2, "Maximum number of files processed concurrently.")
 
 type fileInput struct {
-	fileName string
+	fileName *string
 	data     io.ReadCloser
 }
 
@@ -41,12 +41,13 @@ func main() {
 
 	go func() {
 		if flag.NArg() == 0 {
-			in <- fileInput{"", os.Stdin}
+			in <- fileInput{nil, os.Stdin}
 		} else {
-			for _, file := range flag.Args() {
+			for i := range flag.Args() {
+				file := flag.Arg(i)
 				stream, err := os.Open(file)
 				if err == nil {
-					in <- fileInput{file, stream}
+					in <- fileInput{&file, stream}
 				} else {
 					fmt.Println(err.Error())
 				}
@@ -98,8 +99,8 @@ func digester(wg *sync.WaitGroup, h *hash.Hash, out chan *string, streams chan f
 
 		var message string
 
-		if len(stream.fileName) > 0 {
-			message = fmt.Sprintf("%0x  %s", (*h).Sum(nil), stream.fileName)
+		if stream.fileName != nil {
+			message = fmt.Sprintf("%0x  %s", (*h).Sum(nil), *stream.fileName)
 		} else {
 			message = fmt.Sprintf("%0x", (*h).Sum(nil))
 		}
