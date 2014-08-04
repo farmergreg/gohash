@@ -11,4 +11,4 @@ Help
 -----
 Run the following to get help using this program.:
 
-    gohash -h
+    gohash -help
