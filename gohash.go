@@ -40,7 +40,7 @@ func main() {
 	out := make(chan *string, *fConcurrent*10)
 
 	go func() {
-		if flag.NFlag() == 0 {
+		if flag.NArg() == 0 {
 			in <- fileInput{"", os.Stdin}
 		} else {
 			for _, file := range flag.Args() {
