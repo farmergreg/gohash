@@ -17,7 +17,6 @@ import (
 
 var fHash = flag.String("h", "sha256", "valid hashes: md5, sha1, sha224, sha256, sha384, sha512")
 var fConcurrent = flag.Int("j", runtime.NumCPU()*2, "Maximum number of files processed concurrently.")
-var fClassic = flag.Bool("classic", false, "Output hashes in a manner consistent with md5sum.")
 
 type fileInput struct {
 	fileName *string
@@ -37,15 +36,11 @@ func main() {
 	go hashFiles(fHash, out, in)
 
 	//Display the hashing results
-	var classic string
-	if *fClassic == false {
-		classic = *fHash + " "
-	}
 	for curResult := range out {
 		if curResult.fileName == nil {
-			fmt.Printf("%s%0x\n", classic, curResult.result)
+			fmt.Printf("%0x\n", curResult.result)
 		} else {
-			fmt.Printf("%s%0x  %s\n", classic, curResult.result, *curResult.fileName)
+			fmt.Printf("%0x  %s\n", curResult.result, *curResult.fileName)
 		}
 	}
 }
