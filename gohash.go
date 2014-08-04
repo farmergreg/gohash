@@ -17,6 +17,7 @@ import (
 
 var fHash = flag.String("h", "sha256", "valid hashes: md5, sha1, sha224, sha256, sha384, sha512")
 var fConcurrent = flag.Int("j", runtime.NumCPU()*2, "Maximum number of files processed concurrently.")
+var fClassic = flag.Bool("classic", false, "Output hashes in a manner consistent with md5sum.")
 
 type fileInput struct {
 	fileName *string
@@ -36,11 +37,15 @@ func main() {
 	go hashFiles(fHash, out, in)
 
 	//Display the hashing results
+	var classic string
+	if *fClassic == false {
+		classic = *fHash + " "
+	}
 	for curResult := range out {
 		if curResult.fileName == nil {
-			fmt.Printf("%0x\n", curResult.result)
+			fmt.Printf("%s%0x\n", classic, curResult.result)
 		} else {
-			fmt.Printf("%0x  %s\n", curResult.result, *curResult.fileName)
+			fmt.Printf("%s%0x  %s\n", classic, curResult.result, *curResult.fileName)
 		}
 	}
 }
@@ -64,7 +69,7 @@ func handleFlags() {
 }
 
 //Start opening files for processing
-func getFilesForProcessing(in chan fileInput) {
+func getFilesForProcessing(in chan<- fileInput) {
 	if flag.NArg() == 0 {
 		in <- fileInput{nil, os.Stdin}
 	} else {
@@ -80,7 +85,7 @@ func getFilesForProcessing(in chan fileInput) {
 	close(in)
 }
 
-func hashFiles(hashName *string, out chan hashResult, in chan fileInput) {
+func hashFiles(hashName *string, out chan<- hashResult, in <-chan fileInput) {
 	defer close(out)
 	var wg sync.WaitGroup
 	*fHash = strings.ToLower(*fHash)
@@ -109,7 +114,7 @@ func hashFiles(hashName *string, out chan hashResult, in chan fileInput) {
 	wg.Wait()
 }
 
-func digester(wg *sync.WaitGroup, h *hash.Hash, out chan hashResult, streams chan fileInput) {
+func digester(wg *sync.WaitGroup, h *hash.Hash, out chan<- hashResult, streams <-chan fileInput) {
 	for stream := range streams {
 		(*h).Reset()
 
