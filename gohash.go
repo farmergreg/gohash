@@ -45,8 +45,7 @@ func main() {
 		} else {
 			for i := range flag.Args() {
 				file := flag.Arg(i)
-				stream, err := os.Open(file)
-				if err == nil {
+				if stream, err := os.Open(file); err == nil {
 					in <- fileInput{&file, stream}
 				} else {
 					fmt.Println(err.Error())
