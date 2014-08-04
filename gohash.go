@@ -35,6 +35,7 @@ func main() {
 		*fConcurrent = 1
 	}
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	in := make(chan fileInput, *fConcurrent*10)
 	out := make(chan *string, *fConcurrent*10)
 
