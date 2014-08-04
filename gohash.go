@@ -32,52 +32,8 @@ func main() {
 	in := make(chan fileInput, *fConcurrent*2)
 	out := make(chan hashResult, *fConcurrent*2)
 
-	//Start opening files for processing
-	go func() {
-		if flag.NArg() == 0 {
-			in <- fileInput{nil, os.Stdin}
-		} else {
-			for i := range flag.Args() {
-				file := flag.Arg(i)
-				if stream, err := os.Open(file); err == nil {
-					in <- fileInput{&file, stream}
-				} else {
-					fmt.Fprintln(os.Stderr, err.Error())
-				}
-			}
-		}
-		close(in)
-	}()
-
-	//Hash the files that have been opened for processing
-	go func() {
-		defer close(out)
-		var wg sync.WaitGroup
-		*fHash = strings.ToLower(*fHash)
-		for i := 0; i < *fConcurrent; i++ {
-			var hash hash.Hash
-			switch *fHash {
-			case "md5":
-				hash = md5.New()
-			case "sha1":
-				hash = sha1.New()
-			case "sha224":
-				hash = sha256.New224()
-			case "sha256":
-				hash = sha256.New()
-			case "sha384":
-				hash = sha512.New384()
-			case "sha512":
-				hash = sha512.New()
-			default:
-				fmt.Fprintf(os.Stderr, "I don't know how to compute a %s hash!", *fHash)
-				return
-			}
-			wg.Add(1)
-			go digester(&wg, &hash, out, in)
-		}
-		wg.Wait()
-	}()
+	go getFilesForProcessing(in)
+	go hashFiles(fHash, out, in)
 
 	//Display the hashing results
 	for curResult := range out {
@@ -89,6 +45,7 @@ func main() {
 	}
 }
 
+//Setup flags and sanitize user input
 func handleFlags() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "%s v1.0 Copyright (c) 2014, Gregory L. Dietsche.\n", os.Args[0])
@@ -101,7 +58,55 @@ func handleFlags() {
 		*fConcurrent = 1
 	}
 
+	*fHash = strings.ToLower(*fHash)
+
 	runtime.GOMAXPROCS(runtime.NumCPU())
+}
+
+//Start opening files for processing
+func getFilesForProcessing(in chan fileInput) {
+	if flag.NArg() == 0 {
+		in <- fileInput{nil, os.Stdin}
+	} else {
+		for i := range flag.Args() {
+			file := flag.Arg(i)
+			if stream, err := os.Open(file); err == nil {
+				in <- fileInput{&file, stream}
+			} else {
+				fmt.Fprintln(os.Stderr, err.Error())
+			}
+		}
+	}
+	close(in)
+}
+
+func hashFiles(hashName *string, out chan hashResult, in chan fileInput) {
+	defer close(out)
+	var wg sync.WaitGroup
+	*fHash = strings.ToLower(*fHash)
+	for i := 0; i < *fConcurrent; i++ {
+		var hash hash.Hash
+		switch *hashName {
+		case "md5":
+			hash = md5.New()
+		case "sha1":
+			hash = sha1.New()
+		case "sha224":
+			hash = sha256.New224()
+		case "sha256":
+			hash = sha256.New()
+		case "sha384":
+			hash = sha512.New384()
+		case "sha512":
+			hash = sha512.New()
+		default:
+			fmt.Fprintf(os.Stderr, "I don't know how to compute a %s hash!", *fHash)
+			return
+		}
+		wg.Add(1)
+		go digester(&wg, &hash, out, in)
+	}
+	wg.Wait()
 }
 
 func digester(wg *sync.WaitGroup, h *hash.Hash, out chan hashResult, streams chan fileInput) {
