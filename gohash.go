@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
+
 	"flag"
 	"fmt"
 	"hash"
@@ -35,10 +36,7 @@ func main() {
 
 	if *fCheck {
 		go openFilesForCheck(in)
-		thing := <-in
-		fHash = thing.expectedHashType
-		in <- thing
-		go hashFiles(fHash, out, in)
+		go hashFiles(out, in)
 
 		for curResult := range out {
 			var computed = fmt.Sprintf("%0x", curResult.hash)
@@ -47,7 +45,7 @@ func main() {
 		}
 	} else {
 		go openFilesForHashing(in)
-		go hashFiles(fHash, out, in)
+		go hashFiles(out, in)
 
 		//Display the hashing results
 		for curResult := range out {
@@ -109,7 +107,7 @@ func openFilesForHashing(in chan<- fileHash) {
 		for i := range flag.Args() {
 			file := flag.Arg(i)
 			if stream, err := os.Open(file); err == nil {
-				in <- fileHash{&file, stream, nil, nil, nil}
+				in <- fileHash{&file, stream, nil, fHash, nil}
 			} else {
 				fmt.Fprintln(os.Stderr, err.Error())
 			}
@@ -117,13 +115,22 @@ func openFilesForHashing(in chan<- fileHash) {
 	}
 }
 
-func hashFiles(hashName *string, out chan<- fileHash, in <-chan fileHash) {
+func hashFiles(out chan<- fileHash, in <-chan fileHash) {
 	defer close(out)
 	var wg sync.WaitGroup
 	*fHash = strings.ToLower(*fHash)
 	for i := 0; i < *fConcurrent; i++ {
+		wg.Add(1)
+		go digester(&wg, out, in)
+	}
+	wg.Wait()
+}
+
+func digester(wg *sync.WaitGroup, out chan<- fileHash, streams <-chan fileHash) {
+	for file := range streams {
 		var hash hash.Hash
-		switch *hashName {
+
+		switch *file.expectedHashType {
 		case "md5":
 			hash = md5.New()
 		case "sha1":
@@ -137,22 +144,15 @@ func hashFiles(hashName *string, out chan<- fileHash, in <-chan fileHash) {
 		case "sha512":
 			hash = sha512.New()
 		default:
-			fmt.Fprintf(os.Stderr, "I don't know how to compute a %s hash!", *fHash)
-			return
+			fmt.Fprintf(os.Stderr, "%s: I don't know how to compute a %s hash!\n", *file.fileName, *file.expectedHashType)
+			file.r.Close()
+			continue
 		}
-		wg.Add(1)
-		go digester(&wg, &hash, out, in)
-	}
-	wg.Wait()
-}
 
-func digester(wg *sync.WaitGroup, h *hash.Hash, out chan<- fileHash, streams <-chan fileHash) {
-	for file := range streams {
-		(*h).Reset()
-		io.Copy(*h, file.r)
+		io.Copy(hash, file.r)
 		file.r.Close()
+		file.hash = hash.Sum(nil)
 
-		file.hash = (*h).Sum(nil)
 		out <- file
 	}
 	wg.Done()
