@@ -46,7 +46,6 @@ func main() {
 		go openFilesForHashing(in)
 		go hashFiles(out, in)
 
-		//Display the hashing results
 		for curResult := range out {
 			if curResult.fileName == nil {
 				fmt.Printf("%0x\n", curResult.hash)
