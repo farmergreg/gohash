@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
@@ -17,32 +18,47 @@ import (
 
 var fHash = flag.String("h", "sha256", "valid hashes: md5, sha1, sha224, sha256, sha384, sha512")
 var fConcurrent = flag.Int("j", runtime.NumCPU()*2, "Maximum number of files processed concurrently.")
+var fCheck = flag.Bool("c", false, "Read hash from FILE and verify.")
 
-type fileInput struct {
-	fileName *string
-	data     io.ReadCloser
-}
-type hashResult struct {
-	fileName *string
-	result   []byte
+type fileHash struct {
+	fileName         *string
+	r                io.ReadCloser
+	hash             []byte
+	expectedHashType *string
+	expecteHash      *string
 }
 
 func main() {
 	handleFlags()
-	in := make(chan fileInput, *fConcurrent*2)
-	out := make(chan hashResult, *fConcurrent*2)
+	in := make(chan fileHash, *fConcurrent*2)
+	out := make(chan fileHash, *fConcurrent*2)
 
-	go getFilesForProcessing(in)
-	go hashFiles(fHash, out, in)
+	if *fCheck {
+		go openFilesForCheck(in)
+		thing := <-in
+		fHash = thing.expectedHashType
+		in <- thing
+		go hashFiles(fHash, out, in)
 
-	//Display the hashing results
-	for curResult := range out {
-		if curResult.fileName == nil {
-			fmt.Printf("%0x\n", curResult.result)
-		} else {
-			fmt.Printf("%0x  %s\n", curResult.result, *curResult.fileName)
+		for curResult := range out {
+			var computed = fmt.Sprintf("%0x", curResult.hash)
+			fmt.Printf("%s %t\n", *curResult.fileName, computed == *curResult.expecteHash)
+
+		}
+	} else {
+		go openFilesForHashing(in)
+		go hashFiles(fHash, out, in)
+
+		//Display the hashing results
+		for curResult := range out {
+			if curResult.fileName == nil {
+				fmt.Printf("%0x\n", curResult.hash)
+			} else {
+				fmt.Printf("%s %0x %s\n", *fHash, curResult.hash, *curResult.fileName)
+			}
 		}
 	}
+
 }
 
 //Setup flags and sanitize user input
@@ -63,24 +79,45 @@ func handleFlags() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
+func openFilesForCheck(in chan<- fileHash) {
+	defer close(in)
+
+	checkFile, err := os.Open(flag.Arg(0))
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return
+	}
+	defer checkFile.Close()
+
+	s := bufio.NewScanner(checkFile)
+	for s.Scan() {
+		var splits = strings.Split(s.Text(), " ")
+		if stream, err := os.Open(splits[2]); err == nil {
+			in <- fileHash{&splits[2], stream, nil, &splits[0], &splits[1]}
+		} else {
+			fmt.Fprintln(os.Stderr, err.Error())
+		}
+	}
+}
+
 //Start opening files for processing
-func getFilesForProcessing(in chan<- fileInput) {
+func openFilesForHashing(in chan<- fileHash) {
+	defer close(in)
 	if flag.NArg() == 0 {
-		in <- fileInput{nil, os.Stdin}
+		in <- fileHash{nil, os.Stdin, nil, nil, nil}
 	} else {
 		for i := range flag.Args() {
 			file := flag.Arg(i)
 			if stream, err := os.Open(file); err == nil {
-				in <- fileInput{&file, stream}
+				in <- fileHash{&file, stream, nil, nil, nil}
 			} else {
 				fmt.Fprintln(os.Stderr, err.Error())
 			}
 		}
 	}
-	close(in)
 }
 
-func hashFiles(hashName *string, out chan<- hashResult, in <-chan fileInput) {
+func hashFiles(hashName *string, out chan<- fileHash, in <-chan fileHash) {
 	defer close(out)
 	var wg sync.WaitGroup
 	*fHash = strings.ToLower(*fHash)
@@ -109,14 +146,14 @@ func hashFiles(hashName *string, out chan<- hashResult, in <-chan fileInput) {
 	wg.Wait()
 }
 
-func digester(wg *sync.WaitGroup, h *hash.Hash, out chan<- hashResult, streams <-chan fileInput) {
-	for stream := range streams {
+func digester(wg *sync.WaitGroup, h *hash.Hash, out chan<- fileHash, streams <-chan fileHash) {
+	for file := range streams {
 		(*h).Reset()
+		io.Copy(*h, file.r)
+		file.r.Close()
 
-		io.Copy(*h, stream.data)
-		stream.data.Close()
-
-		out <- hashResult{stream.fileName, (*h).Sum(nil)}
+		file.hash = (*h).Sum(nil)
+		out <- file
 	}
 	wg.Done()
 }
