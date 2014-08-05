@@ -6,7 +6,6 @@ import (
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
-
 	"flag"
 	"fmt"
 	"hash"
@@ -41,7 +40,6 @@ func main() {
 		for curResult := range out {
 			var computed = fmt.Sprintf("%0x", curResult.hash)
 			fmt.Printf("%s %t\n", *curResult.fileName, computed == *curResult.expecteHash)
-
 		}
 	} else {
 		go openFilesForHashing(in)
@@ -56,7 +54,6 @@ func main() {
 			}
 		}
 	}
-
 }
 
 //Setup flags and sanitize user input
