@@ -115,7 +115,6 @@ func openFilesForHashing(in chan<- fileHash) {
 func hashFiles(out chan<- fileHash, in <-chan fileHash) {
 	defer close(out)
 	var wg sync.WaitGroup
-	*fHash = strings.ToLower(*fHash)
 	for i := 0; i < *fConcurrent; i++ {
 		wg.Add(1)
 		go digester(&wg, out, in)
