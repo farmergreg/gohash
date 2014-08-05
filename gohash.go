@@ -77,6 +77,11 @@ func handleFlags() {
 func openFilesForCheck(in chan<- fileHash) {
 	defer close(in)
 
+	if flag.NArg() != 1 {
+		fmt.Fprintln(os.Stderr, "Please specify a file that contains previous hash output from this program.")
+		return
+	}
+
 	checkFile, err := os.Open(flag.Arg(0))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
