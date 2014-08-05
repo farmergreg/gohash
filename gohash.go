@@ -9,6 +9,7 @@ import (
 	"flag"
 	"fmt"
 	"hash"
+	"hash/crc32"
 	"io"
 	"os"
 	"runtime"
@@ -16,7 +17,7 @@ import (
 	"sync"
 )
 
-var fHash = flag.String("h", "sha256", "valid hashes: md5, sha1, sha224, sha256, sha384, sha512")
+var fHash = flag.String("h", "sha256", "valid hashes: crc32, md5, sha1, sha224, sha256, sha384, sha512")
 var fConcurrent = flag.Int("j", runtime.NumCPU()*2, "Maximum number of files processed concurrently.")
 var fCheck = flag.Bool("c", false, "Read hash from FILE and verify.")
 
@@ -132,6 +133,8 @@ func digester(wg *sync.WaitGroup, out chan<- fileHash, streams <-chan fileHash) 
 		var hash hash.Hash
 
 		switch *file.expectedHashType {
+		case "crc32":
+			hash = crc32.NewIEEE()
 		case "md5":
 			hash = md5.New()
 		case "sha1":
