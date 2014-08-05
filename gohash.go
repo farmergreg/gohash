@@ -18,7 +18,7 @@ import (
 )
 
 var fHash = flag.String("h", "sha256", "valid hashes: crc32, md5, sha1, sha224, sha256, sha384, sha512")
-var fConcurrent = flag.Int("j", runtime.NumCPU()*2, "Maximum number of files processed concurrently.")
+var fConcurrent = flag.Int("j", runtime.NumCPU()*4, "Maximum number of files processed concurrently.")
 var fCheck = flag.Bool("c", false, "Read hash from FILE and verify.")
 
 type fileHash struct {
