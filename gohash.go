@@ -105,7 +105,7 @@ func openFilesForCheck(in chan<- fileHash) {
 func openFilesForHashing(in chan<- fileHash) {
 	defer close(in)
 	if flag.NArg() == 0 {
-		in <- fileHash{nil, os.Stdin, nil, nil, nil}
+		in <- fileHash{nil, os.Stdin, nil, fHash, nil}
 	} else {
 		for i := range flag.Args() {
 			file := flag.Arg(i)
