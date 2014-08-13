@@ -1,0 +1,5 @@
+{
+	"ImportPath": "github.com/dietsche/gohash",
+	"GoVersion": "go1.3",
+	"Deps": []
+}
