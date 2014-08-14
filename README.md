@@ -2,7 +2,7 @@ gohash
 ======
 Copyright (c) 2014, Gregory L. Dietsche.
 
-gohash is a fast concurrent file hashing program that can take the place of
+gohash is a fast concurrent file hashing program that can replace
 many common hashing programs like md5sum, sha512sum, etc...
 
 Supports the following hashes: crc32, md5, sha1, sha224, sha256, sha384, sha512.
@@ -12,3 +12,7 @@ Help
 Run the following to get help using this program.:
 
     gohash -help
+
+Why
+-----
+Greg wrote gohash beging learning about [golang](http://golang.org/).
