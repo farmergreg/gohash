@@ -29,6 +29,24 @@ type fileHash struct {
 	expecteHash      *string
 }
 
+//Setup flags and sanitize user input
+func handleFlags() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "%s v1.0 Copyright (c) 2014, Gregory L. Dietsche.\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage of %s: [OPTION]... [FILE]...\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+	flag.Parse()
+
+	if *fConcurrent <= 0 {
+		*fConcurrent = 1
+	}
+
+	*fHash = strings.ToLower(*fHash)
+
+	runtime.GOMAXPROCS(runtime.NumCPU())
+}
+
 func main() {
 	handleFlags()
 	in := make(chan fileHash, *fConcurrent*2)
@@ -54,24 +72,6 @@ func main() {
 			}
 		}
 	}
-}
-
-//Setup flags and sanitize user input
-func handleFlags() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "%s v1.0 Copyright (c) 2014, Gregory L. Dietsche.\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "Usage of %s: [OPTION]... [FILE]...\n", os.Args[0])
-		flag.PrintDefaults()
-	}
-	flag.Parse()
-
-	if *fConcurrent <= 0 {
-		*fConcurrent = 1
-	}
-
-	*fHash = strings.ToLower(*fHash)
-
-	runtime.GOMAXPROCS(runtime.NumCPU())
 }
 
 func openFilesForCheck(in chan<- fileHash) {
@@ -100,7 +100,6 @@ func openFilesForCheck(in chan<- fileHash) {
 	}
 }
 
-//Start opening files for processing
 func openFilesForHashing(in chan<- fileHash) {
 	defer close(in)
 	if flag.NArg() == 0 {
