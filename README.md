@@ -15,4 +15,4 @@ Run the following to get help using this program.:
 
 Why
 -----
-Greg wrote gohash beging learning about [golang](http://golang.org/).
+I wrote gohash to learn about [golang](http://golang.org/).
